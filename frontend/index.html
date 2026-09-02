@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>绿茵慧眼 · 球员能力评估系统</title>
+    <link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+
+<!-- ============ 顶部栏 ============ -->
+<header class="header">
+    <div class="logo">
+        ⚽ 绿茵慧眼
+        <span>球员能力评估与生涯规划系统</span>
+    </div>
+    <div class="status">
+        <span>后端状态</span>
+        <div class="status-dot" id="statusDot" title="检测中..."></div>
+        <span id="statusText">检测中</span>
+    </div>
+</header>
+
+<!-- ============ 主内容 ============ -->
+<main class="main">
+
+    <!-- 左侧：输入面板 -->
+    <aside class="sidebar">
+        <div class="card">
+            <h3 class="card-title">评估设置</h3>
+
+            <div class="seg">
+                <button class="seg-btn active" id="btnModeStar" onclick="setMode('star')">从球星库选择</button>
+                <button class="seg-btn" id="btnModeCustom" onclick="setMode('custom')">自定义球员</button>
+            </div>
+
+            <!-- 球星库模式 -->
+            <div id="panelStar">
+                <label class="field-label">搜索球员姓名</label>
+                <div class="search-wrap">
+                    <input type="text" id="starSearch" class="input" placeholder="输入姓名，如 Messi / Haaland..." autocomplete="off" oninput="onStarSearch()">
+                    <div class="search-list" id="starSearchList"></div>
+                </div>
+                <p class="caption" id="starHint">加载球星库中...</p>
+                <div class="star-info" id="starInfo"></div>
+                <button class="start-btn" id="btnEvaluateStar" onclick="evaluateStar()" disabled>
+                    生成评估报告
+                </button>
+            </div>
+
+            <!-- 自定义模式 -->
+            <div id="panelCustom" style="display:none;">
+                <!-- 图片识别入口 -->
+                <div class="upload-card">
+                    <div class="upload-box" id="uploadBox" title="点击选择或拖拽图片">
+                        <input type="file" id="imgInput" accept="image/*" hidden>
+                        <div class="upload-icon">📷</div>
+                        <p>上传球员图片，自动识别</p>
+                        <p class="upload-hint">球员卡 / 资料页截图（jpg、png）</p>
+                        <img id="imgPreview" alt="图片预览" hidden>
+                    </div>
+                    <button class="start-btn" id="btnRecognize" onclick="recognizeImage()" disabled>
+                        识别球员信息
+                    </button>
+                    <div id="recognizeMsg"></div>
+                    <div class="divider">或手动填写</div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label class="field-label">姓名</label>
+                        <input type="text" id="inName" class="input" value="测试新星">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">年龄</label>
+                        <input type="number" id="inAge" class="input" value="18" min="15" max="45">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">位置</label>
+                        <select id="inPosition" class="select">
+                            <option value="ST">前锋 (ST)</option>
+                            <option value="W">边锋 (W)</option>
+                            <option value="CAM">前腰 (CAM)</option>
+                            <option value="CM">中场 (CM)</option>
+                            <option value="CDM">后腰 (CDM)</option>
+                            <option value="FB">边后卫 (FB)</option>
+                            <option value="CB">中后卫 (CB)</option>
+                            <option value="GK">门将 (GK)</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">综合评分</label>
+                        <input type="number" id="inOverall" class="input" value="78" min="40" max="99">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">速度 <span class="val" id="vPace">88</span></label>
+                        <input type="range" id="inPace" min="20" max="99" value="88" oninput="syncRange('inPace','vPace')">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">射门 <span class="val" id="vShooting">70</span></label>
+                        <input type="range" id="inShooting" min="20" max="99" value="70" oninput="syncRange('inShooting','vShooting')">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">传球 <span class="val" id="vPassing">74</span></label>
+                        <input type="range" id="inPassing" min="20" max="99" value="74" oninput="syncRange('inPassing','vPassing')">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">盘带 <span class="val" id="vDribbling">86</span></label>
+                        <input type="range" id="inDribbling" min="20" max="99" value="86" oninput="syncRange('inDribbling','vDribbling')">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">防守 <span class="val" id="vDefending">32</span></label>
+                        <input type="range" id="inDefending" min="20" max="99" value="32" oninput="syncRange('inDefending','vDefending')">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">体能 <span class="val" id="vPhysical">66</span></label>
+                        <input type="range" id="inPhysical" min="20" max="99" value="66" oninput="syncRange('inPhysical','vPhysical')">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">俱乐部</label>
+                        <input type="text" id="inClub" class="input" value="测试FC">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">联赛</label>
+                        <input type="text" id="inLeague" class="input" value="测试联赛">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">赛季进球</label>
+                        <input type="number" id="inGoals" class="input" value="6" min="0" max="60">
+                    </div>
+                    <div class="form-item">
+                        <label class="field-label">身价（万欧）</label>
+                        <input type="number" id="inValue" class="input" value="1500" min="0" max="30000">
+                    </div>
+                </div>
+                <button class="start-btn" onclick="evaluateCustom()">生成评估报告</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 右侧：报告区 -->
+    <section class="content">
+        <div class="card empty" id="emptyState">
+            <div class="empty-icon">📋</div>
+            <p>请在左侧选择或填写球员信息，然后点击「生成评估报告」。</p>
+        </div>
+
+        <div id="reportArea" style="display:none;">
+            <!-- 概览指标 -->
+            <div class="metrics" id="metrics"></div>
+
+            <!-- 标签页 -->
+            <div class="tabs" id="tabs">
+                <button class="tab active" data-tab="tab1" onclick="switchTab('tab1')">能力画像</button>
+                <button class="tab" data-tab="tab2" onclick="switchTab('tab2')">风格定位</button>
+                <button class="tab" data-tab="tab3" onclick="switchTab('tab3')">潜力预测</button>
+                <button class="tab" data-tab="tab4" onclick="switchTab('tab4')">生涯规划建议</button>
+                <button class="tab" data-tab="tab5" onclick="switchTab('tab5')">对标球员</button>
+            </div>
+
+            <div class="tab-body">
+                <!-- Tab1 能力画像 -->
+                <div class="tab-pane active" id="tab1">
+                    <div class="chart-wrap">
+                        <canvas id="radarCanvas" width="640" height="440"></canvas>
+                    </div>
+                    <div class="two-col" id="radarSummary"></div>
+                </div>
+
+                <!-- Tab2 风格定位 -->
+                <div class="tab-pane" id="tab2">
+                    <div class="chart-wrap">
+                        <canvas id="clusterCanvas" width="960" height="440"></canvas>
+                    </div>
+                    <div class="table-wrap" id="clusterSummary"></div>
+                </div>
+
+                <!-- Tab3 潜力预测 -->
+                <div class="tab-pane" id="tab3">
+                    <div class="chart-wrap">
+                        <canvas id="curveCanvas" width="960" height="440"></canvas>
+                    </div>
+                    <p class="caption" id="modelInfo"></p>
+                </div>
+
+                <!-- Tab4 生涯规划建议 -->
+                <div class="tab-pane" id="tab4">
+                    <div class="advice-summary" id="adviceSummary"></div>
+                    <div class="two-col" id="adviceStage"></div>
+                    <h4 class="sub-title">训练重点</h4>
+                    <div class="table-wrap" id="trainingTable"></div>
+                    <div class="llm-report" id="llmReport" style="display:none;"></div>
+                </div>
+
+                <!-- Tab5 对标球员 -->
+                <div class="tab-pane" id="tab5">
+                    <div class="table-wrap" id="benchTable"></div>
+                </div>
+            </div>
+
+            <div class="market-bar" id="marketBar"></div>
+        </div>
+    </section>
+</main>
+
+<script>
+/* ============ 绿茵慧眼 · 前端逻辑 ============ */
+"use strict";
+
+/* 全局错误捕获：任何 JS 异常都显示在页面顶部，便于定位问题 */
+(function () {
+    function showErr(msg) {
+        let bar = document.getElementById("jsErrorBar");
+        if (!bar) {
+            bar = document.createElement("div");
+            bar.id = "jsErrorBar";
+            bar.style.cssText =
+                "position:fixed;top:0;left:0;right:0;z-index:9999;background:#d33;" +
+                "color:#fff;padding:8px 12px;font:12px/1.5 monospace;white-space:pre-wrap;" +
+                "cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4);";
+            bar.title = "点击关闭";
+            bar.addEventListener("click", () => bar.remove());
+            document.body.appendChild(bar);
+        }
+        bar.textContent = "[JS错误] " + msg;
+    }
+    window.addEventListener("error", e => showErr(e.message + " @ " + (e.filename || "") + ":" + (e.lineno || "")));
+    window.addEventListener("unhandledrejection", e => showErr("Promise: " + (e.reason && e.reason.message || e.reason)));
+})();
+
+const API_BASE = "http://127.0.0.1:8000"; // 后端地址（支持直接双击 index.html 使用；用 127.0.0.1 避免 localhost 解析成 IPv6）
+
+const SKILL_CN = {
+    pace: "速度", shooting: "射门", passing: "传球",
+    dribbling: "盘带", defending: "防守", physical: "体能",
+};
+const SKILL_ORDER = ["pace", "shooting", "passing", "dribbling", "defending", "physical"];
+const POSITION_CN = {
+    GK: "门将", CB: "中后卫", FB: "边后卫", CM: "中场",
+    CAM: "前腰", CDM: "后腰", W: "边锋", ST: "前锋",
+};
+
+let currentMode = "star";
+let stars = [];
+let selectedStar = null;
+let clusterMap = null;
+let report = null;
+
+/* ---------------- 工具函数 ---------------- */
+async function api(path, options = {}) {
+    const resp = await fetch(API_BASE + path, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+        let msg = data.detail;
+        if (Array.isArray(msg)) {
+            msg = msg.map(x => x.msg || JSON.stringify(x)).join("；");
+        }
+        throw new Error(msg || `请求失败 (${resp.status})`);
+    }
+    return data;
+}
+
+function fmtValue(v) {
+    if (v === null || v === undefined) return "—";
+    if (v >= 1e8) return (v / 1e8).toFixed(2) + " 亿欧";
+    if (v >= 1e4) return (v / 1e4).toFixed(0) + " 万欧";
+    return v + " 欧";
+}
+
+function showLoading(show, text = "评估中，请稍候...") {
+    let mask = document.getElementById("loadingMask");
+    if (show) {
+        if (!mask) {
+            mask = document.createElement("div");
+            mask.id = "loadingMask";
+            mask.className = "loading-mask";
+            mask.innerHTML = `<div class="spinner"></div><p>${text}</p>`;
+            document.body.appendChild(mask);
+        }
+        mask.style.display = "flex";
+    } else if (mask) {
+        mask.style.display = "none";
+    }
+}
+
+function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+}
+
+/* ---------------- 启动与状态 ---------------- */
+async function init() {
+    await checkHealth();
+    await loadStars();
+    initImageUpload();
+}
+
+async function checkHealth() {
+    const dot = document.getElementById("statusDot");
+    const txt = document.getElementById("statusText");
+    try {
+        const info = await api("/api/health");
+        dot.className = "status-dot on";
+        txt.textContent = `正常 · ${info.pool_size} 名球员 · ${info.clusters} 类风格`;
+    } catch (e) {
+        dot.className = "status-dot off";
+        txt.textContent = "无法连接后端";
+        if (window.location.protocol === "file:") {
+            // 双击 index.html 打开时，后端必须已启动才能取数
+            document.body.insertAdjacentHTML("afterbegin",
+                `<div style="background:#b45309;color:#fff;padding:10px 14px;text-align:center;font-size:13px;">
+                    后端未启动：请先双击项目根目录的 <b>start.bat</b>，待黑窗口显示 "Application startup complete" 后，
+                    再刷新本页面。
+                </div>`);
+        }
+    }
+}
+
+async function loadStars() {
+    const hint = document.getElementById("starHint");
+    try {
+        const data = await api("/api/stars");
+        stars = data.players || [];
+        if (hint) hint.textContent = `共 ${stars.length} 名球星，输入姓名搜索`;
+    } catch (e) {
+        if (hint) hint.textContent = "球星库加载失败：" + e.message;
+    }
+}
+
+function onStarSearch() {
+    const q = (document.getElementById("starSearch").value || "").trim().toLowerCase();
+    const list = document.getElementById("starSearchList");
+    if (!list) return;
+    const hits = (q ? stars.filter(s => (s.name || "").toLowerCase().includes(q)) : stars).slice(0, 12);
+    if (!hits.length) {
+        list.innerHTML = `<div class="search-empty">未找到匹配球员，试试英文名</div>`;
+        list.style.display = "block";
+        return;
+    }
+    list.innerHTML = hits.map(s => `
+        <div class="search-item" data-name="${escapeHtml(s.name)}">
+            <b>${escapeHtml(s.name)}</b>
+            <span>${escapeHtml(POSITION_CN[s.position] || s.position || "")} · ${s.overall ?? "-"} · ${escapeHtml(s.club || "")}</span>
+        </div>`).join("");
+    list.querySelectorAll(".search-item").forEach(el => {
+        el.addEventListener("click", () => selectStar(el.dataset.name));
+    });
+    list.style.display = "block";
+}
+
+function selectStar(name) {
+    const star = stars.find(s => s.name === name);
+    if (!star) return;
+    selectedStar = star;
+    const input = document.getElementById("starSearch");
+    if (input) input.value = star.name;
+    const list = document.getElementById("starSearchList");
+    if (list) list.style.display = "none";
+    const box = document.getElementById("starInfo");
+    if (box) {
+        box.innerHTML =
+            `<b>${escapeHtml(star.name)}</b> · 国籍 ${escapeHtml(star.nationality)}<br>` +
+            `位置 ${escapeHtml(POSITION_CN[star.position] || star.position)} · 年龄 ${star.age} · 评分 ${star.overall} · 潜力 ${star.potential}<br>` +
+            `俱乐部 ${escapeHtml(star.club)}（${escapeHtml(star.league)}）· 身价 ${fmtValue(star.market_value)}`;
+    }
+    document.getElementById("btnEvaluateStar").disabled = false;
+}
+
+/* 点击页面空白处关闭搜索结果 */
+document.addEventListener("click", e => {
+    const list = document.getElementById("starSearchList");
+    const wrap = document.querySelector(".search-wrap");
+    if (list && wrap && !wrap.contains(e.target)) list.style.display = "none";
+});
+
+/* ---------------- 模式切换 ---------------- */
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById("btnModeStar").classList.toggle("active", mode === "star");
+    document.getElementById("btnModeCustom").classList.toggle("active", mode === "custom");
+    document.getElementById("panelStar").style.display = mode === "star" ? "" : "none";
+    document.getElementById("panelCustom").style.display = mode === "custom" ? "" : "none";
+}
+
+function syncRange(id, valId) {
+    document.getElementById(valId).textContent = document.getElementById(id).value;
+}
+
+/* ---------------- 图片识别 ---------------- */
+let pendingImage = null;
+
+function initImageUpload() {
+    const box = document.getElementById("uploadBox");
+    const input = document.getElementById("imgInput");
+    if (!box || !input) return;
+
+    box.addEventListener("click", () => input.click());
+
+    input.addEventListener("change", e => {
+        if (e.target.files.length) onImageSelected(e.target.files[0]);
+    });
+
+    ["dragenter", "dragover"].forEach(ev => box.addEventListener(ev, e => {
+        e.preventDefault();
+        box.classList.add("drag");
+    }));
+    ["dragleave", "drop"].forEach(ev => box.addEventListener(ev, e => {
+        e.preventDefault();
+        box.classList.remove("drag");
+    }));
+    box.addEventListener("drop", e => {
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && f.type.startsWith("image/")) onImageSelected(f);
+    });
+}
+
+function onImageSelected(file) {
+    pendingImage = file;
+    const img = document.getElementById("imgPreview");
+    img.src = URL.createObjectURL(file);
+    img.hidden = false;
+    document.getElementById("btnRecognize").disabled = false;
+    document.getElementById("recognizeMsg").innerHTML = "";
+}
+
+async function recognizeImage() {
+    if (!pendingImage) { alert("请先上传一张球员图片"); return; }
+    showLoading(true, "正在识别图片中的球员信息...");
+    try {
+        const fd = new FormData();
+        fd.append("file", pendingImage);
+        const resp = await fetch(API_BASE + "/api/recognize", { method: "POST", body: fd });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || "识别失败");
+
+        fillFormFromPlayer(data.player, data.recognized || {});
+
+        const cnt = Object.values(data.recognized || {}).filter(Boolean).length;
+        const notes = data.notes || [];
+        document.getElementById("recognizeMsg").innerHTML =
+            `<div class="alert success">已识别：<b>${escapeHtml(data.player.name || "球员")}</b>，共 ${cnt} 项信息</div>` +
+            notes.map(n => `<div class="alert warn">${escapeHtml(n)}</div>`).join("") +
+            `<p class="caption">已自动填入下方表单，可直接生成报告，也可微调后再生成。</p>`;
+    } catch (e) {
+        document.getElementById("recognizeMsg").innerHTML =
+            `<div class="alert warn">识别失败：${escapeHtml(e.message)}</div>`;
+    } finally {
+        showLoading(false);
+    }
+}
+
+const FORM_MAP = {
+    name: "inName", age: "inAge", position: "inPosition", overall: "inOverall",
+    pace: "inPace", shooting: "inShooting", passing: "inPassing",
+    dribbling: "inDribbling", defending: "inDefending", physical: "inPhysical",
+    club: "inClub", league: "inLeague", season_goals: "inGoals",
+};
+const RANGE_VAL_IDS = { pace: "vPace", shooting: "vShooting", passing: "vPassing",
+    dribbling: "vDribbling", defending: "vDefending", physical: "vPhysical" };
+
+function fillFormFromPlayer(player, recognized) {
+    Object.entries(FORM_MAP).forEach(([key, elId]) => {
+        if (!recognized[key]) return;
+        const v = player[key];
+        if (v === undefined || v === null || v === "") return;
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.value = v;
+        if (RANGE_VAL_IDS[key]) {
+            const vEl = document.getElementById(RANGE_VAL_IDS[key]);
+            if (vEl) vEl.textContent = v;
+        }
+    });
+    // 身价：后端返回欧元，表单单位为万欧
+    if (recognized.market_value && player.market_value) {
+        const el = document.getElementById("inValue");
+        if (el) el.value = Math.round(player.market_value / 10000);
+    }
+}
+
+/* ---------------- 评估请求 ---------------- */
+function evaluateStar() {
+    if (!selectedStar) { alert("请先搜索并选择一名球员"); return; }
+    runEvaluate({ name: selectedStar.name });
+}
+
+function evaluateCustom() {
+    // 空值/非法值回退默认，避免后端 422
+    const num = (id, dft) => {
+        const v = Number($(id).value);
+        return Number.isFinite(v) && v > 0 ? v : dft;
+    };
+    const player = {
+        name: ($("inName").value || "").trim() || "自定义球员",
+        age: num("inAge", 23),
+        position: ($("inPosition").value || "").trim() || "ST",
+        overall: num("inOverall", 75),
+        pace: num("inPace", 70),
+        shooting: num("inShooting", 70),
+        passing: num("inPassing", 70),
+        dribbling: num("inDribbling", 70),
+        defending: num("inDefending", 70),
+        physical: num("inPhysical", 70),
+        club: $("inClub").value,
+        league: $("inLeague").value,
+        season_goals: num("inGoals", 0),
+        market_value: num("inValue", 0) * 10000,
+    };
+    runEvaluate({ player });
+}
+
+function $(id) { return document.getElementById(id); }
+
+async function runEvaluate(payload) {
+    showLoading(true);
+    try {
+        const data = await api("/api/evaluate", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+        report = data;
+        renderReport(data);
+    } catch (e) {
+        alert("评估失败：" + e.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+/* ---------------- 报告渲染 ---------------- */
+function renderReport(data) {
+    document.getElementById("emptyState").style.display = "none";
+    document.getElementById("reportArea").style.display = "";
+
+    const player = data.player;
+
+    // 指标卡
+    const market = data.market || {};
+    document.getElementById("metrics").innerHTML = `
+        <div class="metric">
+            <div class="m-label">综合评分</div>
+            <div class="m-value">${player.overall}</div>
+            <div class="m-sub">百分位 ${data.profile.overall_percentile}%</div>
+        </div>
+        <div class="metric">
+            <div class="m-label">预测潜力峰值</div>
+            <div class="m-value">${data.potential.peak.toFixed ? data.potential.peak.toFixed(1) : data.potential.peak}</div>
+            <div class="m-sub">当前潜力 ${data.potential.current}</div>
+        </div>
+        <div class="metric">
+            <div class="m-label">风格类型</div>
+            <div class="m-value" style="font-size:1.05rem;">${escapeHtml(data.cluster.style)}</div>
+            <div class="m-sub">KMeans 聚类 ${data.cluster.cluster_id}</div>
+        </div>
+        <div class="metric">
+            <div class="m-label">潜力百分位</div>
+            <div class="m-value">${data.potential.percentile}%</div>
+            <div class="m-sub">同龄球员中的位置</div>
+        </div>
+    `;
+
+    // 各标签页
+    renderRadar(player, data.profile);
+    renderCluster(player, data.cluster);
+    renderCurve(player, data.potential);
+    renderAdvice(data);
+    renderBenchmarks(data.benchmarks);
+
+    // 市场参考
+    const pv = market.player_value;
+    document.getElementById("marketBar").innerHTML =
+        `市场参考：能力相近球员身价区间 <b>${fmtValue(market.low)} ~ ${fmtValue(market.high)}</b>` +
+        (pv ? `（该球员目前身价 ${fmtValue(pv)}）` : "") +
+        (market.count ? `，参考样本 ${market.count} 人` : "");
+
+    switchTab("tab1");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll(".tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.tab === tabId));
+    document.querySelectorAll(".tab-pane").forEach(p =>
+        p.classList.toggle("active", p.id === tabId));
+}
+
+/* ---------------- Tab1 能力画像：雷达图 ---------------- */
+function renderRadar(player, profile) {
+    const canvas = $("radarCanvas");
+    const dpr = window.devicePixelRatio || 1;
+    const W = 640, H = 440;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    const cx = W / 2, cy = H / 2 + 10, R = Math.min(W, H) / 2 - 70;
+    const labels = SKILL_ORDER.map(c => SKILL_CN[c]);
+    const values = SKILL_ORDER.map(c => player[c]);
+    const avgPos = profile.position_avg || {};
+    const avgs = SKILL_ORDER.map(c => avgPos[c] ?? 70);
+
+    ctx.clearRect(0, 0, W, H);
+
+    // 网格（同心六边形 + 刻度线）
+    const N = 5;
+    for (let ring = 1; ring <= N; ring++) {
+        ctx.beginPath();
+        for (let i = 0; i <= 6; i++) {
+            const ang = Math.PI / 3 * i - Math.PI / 2;
+            const r = R * ring / N;
+            const x = cx + r * Math.cos(ang), y = cy + r * Math.sin(ang);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+    for (let i = 0; i < 6; i++) {
+        const ang = Math.PI / 3 * i - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + R * Math.cos(ang), cy + R * Math.sin(ang));
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.stroke();
+        // 标签
+        const lx = cx + (R + 26) * Math.cos(ang);
+        const ly = cy + (R + 26) * Math.sin(ang);
+        ctx.fillStyle = "#b0b0c0";
+        ctx.font = "13px Microsoft YaHei";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(labels[i], lx, ly);
+        // 刻度值
+        const tx = cx + (R + 12) * Math.cos(ang);
+        const ty = cy + (R + 12) * Math.sin(ang);
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.font = "10px Microsoft YaHei";
+        ctx.fillText(100, tx, ty);
+    }
+
+    // 同位置均值（蓝色）
+    fillPolygon(ctx, cx, cy, R, avgs, "rgba(69,123,157,0.35)", "rgba(69,123,157,0.8)");
+
+    // 球员（红色）
+    fillPolygon(ctx, cx, cy, R, values, "rgba(230,57,70,0.35)", "#e63946");
+
+    // 图例
+    ctx.font = "12px Microsoft YaHei";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#e63946";
+    ctx.fillRect(cx - R + 10, cy + R - 8, 14, 10);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("球员", cx - R + 30, cy + R);
+    ctx.fillStyle = "rgba(69,123,157,0.9)";
+    ctx.fillRect(cx - R + 90, cy + R - 8, 14, 10);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("同位置均值", cx - R + 110, cy + R);
+
+    // 优势 / 短板
+    const strong = [], weak = [];
+    SKILL_ORDER.forEach((c, i) => {
+        if (values[i] >= avgs[i]) strong.push(SKILL_CN[c]);
+        else weak.push(SKILL_CN[c]);
+    });
+    $("radarSummary").innerHTML =
+        `<div class="alert success">优势项：${strong.length ? strong.join("、") : "暂无"}</div>` +
+        `<div class="alert warn">相对短板：${weak.length ? weak.join("、") : "无"}</div>`;
+}
+
+function fillPolygon(ctx, cx, cy, R, data, fill, stroke) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const ang = Math.PI / 3 * i - Math.PI / 2;
+        const v = Math.max(0, Math.min(100, data[i])) / 100;
+        const x = cx + R * v * Math.cos(ang);
+        const y = cy + R * v * Math.sin(ang);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // 顶点
+    for (let i = 0; i < 6; i++) {
+        const ang = Math.PI / 3 * i - Math.PI / 2;
+        const v = Math.max(0, Math.min(100, data[i])) / 100;
+        const x = cx + R * v * Math.cos(ang);
+        const y = cy + R * v * Math.sin(ang);
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = stroke;
+        ctx.fill();
+    }
+}
+
+/* ---------------- Tab2 风格定位：聚类散点 ---------------- */
+async function renderCluster(player, cluster) {
+    const canvas = $("clusterCanvas");
+    if (!clusterMap) {
+        try { clusterMap = await api("/api/cluster-map"); }
+        catch (e) { $("clusterSummary").innerHTML = `<div class="alert warn">聚类数据加载失败：${escapeHtml(e.message)}</div>`; return; }
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const W = 960, H = 440;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const points = clusterMap.points || [];
+    if (!points.length) return;
+
+    // 坐标归一化到绘图区
+    const pad = 50;
+    const xs = points.map(p => p.x), ys = points.map(p => p.y);
+    const xMin = Math.min(...xs, cluster.coord[0]), xMax = Math.max(...xs, cluster.coord[0]);
+    const yMin = Math.min(...ys, cluster.coord[1]), yMax = Math.max(...ys, cluster.coord[1]);
+    const spanX = (xMax - xMin) || 1, spanY = (yMax - yMin) || 1;
+    const toX = x => pad + (x - xMin) / spanX * (W - pad * 2);
+    const toY = y => H - pad - (y - yMin) / spanY * (H - pad * 2);
+
+    // 颜色映射
+    const labels = [...new Set(points.map(p => p.label))];
+    const colors = ["#60a5fa", "#fbbf24", "#4ade80", "#c084fc", "#fb7185", "#38bdf8", "#a3e635"];
+    const colorOf = label => colors[labels.indexOf(label) % colors.length];
+
+    // 散点
+    points.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(toX(p.x), toY(p.y), 4, 0, Math.PI * 2);
+        ctx.fillStyle = colorOf(p.label) + "88";
+        ctx.fill();
+    });
+
+    // 当前球员（红星）
+    const tx = toX(cluster.coord[0]), ty = toY(cluster.coord[1]);
+    ctx.beginPath();
+    const spikes = 5, outer = 12, inner = 5;
+    for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outer : inner;
+        const ang = Math.PI / spikes * i - Math.PI / 2;
+        i === 0 ? ctx.moveTo(tx + r * Math.cos(ang), ty + r * Math.sin(ang))
+                : ctx.lineTo(tx + r * Math.cos(ang), ty + r * Math.sin(ang));
+    }
+    ctx.closePath();
+    ctx.fillStyle = "#e63946";
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px Microsoft YaHei";
+    ctx.textAlign = "center";
+    ctx.fillText(player.name + "（" + cluster.style + "）", tx, ty - 18);
+
+    // 图例
+    ctx.font = "12px Microsoft YaHei";
+    ctx.textAlign = "left";
+    let lx = pad, ly = 24;
+    labels.forEach(label => {
+        ctx.fillStyle = colorOf(label);
+        ctx.fillRect(lx, ly - 10, 14, 12);
+        ctx.fillStyle = "#fff";
+        ctx.fillText(label, lx + 20, ly);
+        lx += ctx.measureText(label).width + 58;
+    });
+
+    // 汇总表
+    const summary = clusterMap.summary || [];
+    $("clusterSummary").innerHTML = `
+        <table>
+            <tr><th>风格</th><th>球员数</th><th>代表球员</th></tr>
+            ${summary.map(s => `
+                <tr>
+                    <td>${escapeHtml(s.style)}</td>
+                    <td>${s.count}</td>
+                    <td>${escapeHtml((s.representatives || []).join("、") || "—")}</td>
+                </tr>`).join("")}
+        </table>`;
+}
+
+/* ---------------- Tab3 潜力预测：成长曲线 ---------------- */
+function renderCurve(player, potential) {
+    const canvas = $("curveCanvas");
+    const dpr = window.devicePixelRatio || 1;
+    const W = 960, H = 440;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const curve = potential.curve || [];
+    if (!curve.length) return;
+
+    const padL = 55, padR = 25, padT = 30, padB = 45;
+    const ages = curve.map(c => c.age);
+    const vals = curve.map(c => c.value);
+    const allVals = [...vals, potential.current, potential.peak];
+    const ageMin = Math.min(...ages), ageMax = Math.max(...ages);
+    const vMin = Math.floor(Math.min(...allVals) / 10) * 10;
+    const vMax = Math.ceil(Math.max(...allVals) / 10) * 10;
+    const toX = a => padL + (a - ageMin) / (ageMax - ageMin) * (W - padL - padR);
+    const toY = v => H - padB - (v - vMin) / (vMax - vMin) * (H - padT - padB);
+
+    // 网格 + Y 轴
+    for (let v = vMin; v <= vMax; v += 10) {
+        const y = toY(v);
+        ctx.beginPath();
+        ctx.moveTo(padL, y); ctx.lineTo(W - padR, y);
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.stroke();
+        ctx.fillStyle = "#7a7a8e";
+        ctx.font = "11px Microsoft YaHei";
+        ctx.textAlign = "right";
+        ctx.fillText(v, padL - 8, y + 4);
+    }
+    // X 轴（年龄）
+    for (let a = ageMin; a <= ageMax; a += 2) {
+        const x = toX(a);
+        ctx.fillStyle = "#7a7a8e";
+        ctx.font = "11px Microsoft YaHei";
+        ctx.textAlign = "center";
+        ctx.fillText(a, x, H - padB + 18);
+    }
+    ctx.fillStyle = "#b0b0c0";
+    ctx.textAlign = "center";
+    ctx.fillText("年龄", W / 2, H - 8);
+    ctx.save();
+    ctx.translate(16, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("能力值", 0, 0);
+    ctx.restore();
+
+    // 面积填充
+    ctx.beginPath();
+    curve.forEach((c, i) => {
+        const x = toX(c.age), y = toY(c.value);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(toX(ageMax), toY(vMin));
+    ctx.lineTo(toX(ageMin), toY(vMin));
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, padT, 0, H - padB);
+    grad.addColorStop(0, "rgba(42,157,143,0.4)");
+    grad.addColorStop(1, "rgba(42,157,143,0.05)");
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 曲线
+    ctx.beginPath();
+    curve.forEach((c, i) => {
+        const x = toX(c.age), y = toY(c.value);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = "#2a9d8f";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 当前年龄虚线
+    const curX = toX(player.age);
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(curX, padT); ctx.lineTo(curX, H - padB);
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#fff";
+    ctx.font = "12px Microsoft YaHei";
+    ctx.textAlign = "center";
+    ctx.fillText(`当前 ${player.age} 岁`, curX, padT - 8);
+
+    // 数据点
+    curve.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(toX(c.age), toY(c.value), 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#2a9d8f";
+        ctx.fill();
+    });
+
+    const r2 = potential.model_r2;
+    $("modelInfo").textContent =
+        `潜力预测基于随机森林回归模型` +
+        (r2 ? `（R²=${r2}，RMSE=${potential.model_rmse}）` : "") +
+        `。模型以年龄、当前能力、位置为特征，在球员库上训练获得。预测潜力峰值：${potential.peak}，同龄百分位：${potential.percentile}%。`;
+}
+
+/* ---------------- Tab4 生涯规划建议 ---------------- */
+function renderAdvice(data) {
+    const advice = data.career_advice;
+    $("adviceSummary").innerHTML = `<p>${escapeHtml(advice.summary)}</p>`;
+
+    $("adviceStage").innerHTML =
+        `<div class="alert info"><b>发展阶段：${escapeHtml(advice.stage)}</b><br>${escapeHtml(advice.stage_advice)}</div>` +
+        `<div class="alert info"><b>位置适配：${escapeHtml(advice.best_position)}</b><br>${escapeHtml(advice.transition_suggestion)}</div>`;
+
+    const focus = advice.training_focus || [];
+    $("trainingTable").innerHTML = `
+        <table>
+            <tr><th>项目</th><th>当前值</th><th>同位置均值</th><th>差距</th></tr>
+            ${focus.map(f => `
+                <tr>
+                    <td>${escapeHtml(f.skill_cn)}</td>
+                    <td>${f.value}</td>
+                    <td>${f.avg}</td>
+                    <td style="color:${f.gap < 0 ? "#f87171" : "#4ade80"};">${f.gap > 0 ? "+" : ""}${f.gap}</td>
+                </tr>`).join("")}
+        </table>`;
+
+    const llm = advice.llm_report;
+    const box = $("llmReport");
+    if (llm) {
+        box.style.display = "";
+        box.innerHTML = `<b>AI 球探报告</b><br>${escapeHtml(llm)}`;
+    } else {
+        box.style.display = "none";
+    }
+}
+
+/* ---------------- Tab5 对标球员 ---------------- */
+function renderBenchmarks(benchmarks) {
+    $("benchTable").innerHTML = `
+        <table>
+            <tr><th>球员</th><th>相似度</th><th>位置</th><th>评分</th><th>年龄</th><th>俱乐部</th></tr>
+            ${benchmarks.map(b => `
+                <tr>
+                    <td><b>${escapeHtml(b.name)}</b></td>
+                    <td>${(b.similarity * 100).toFixed(1)}%</td>
+                    <td>${escapeHtml(b.position)}</td>
+                    <td>${b.overall}</td>
+                    <td>${b.age}</td>
+                    <td>${escapeHtml(b.club)}</td>
+                </tr>`).join("")}
+        </table>`;
+}
+
+/* ---------------- 启动 ---------------- */
+init();
+
+</script>
+</body>
+</html>

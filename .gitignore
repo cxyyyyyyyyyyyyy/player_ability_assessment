@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# 运行产物 / 日志
+*.log
+database.sqlite
+database.sqlite-journal
+
+# 备份文件
+*.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
