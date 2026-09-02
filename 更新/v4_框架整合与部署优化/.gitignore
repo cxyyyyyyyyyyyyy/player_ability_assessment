@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# 运行产物 / 日志
+*.log
+*.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
